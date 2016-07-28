@@ -4,7 +4,7 @@
 /* ALU */
 void ALU(unsigned A,unsigned B,char ALUControl,unsigned *ALUresult,char *Zero)
 {
-
+//fdfdf
 }
 
 /* instruction fetch */
