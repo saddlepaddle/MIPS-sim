@@ -1,22 +1,5 @@
 #include "spimcore.h"
 
-/*
- * add 100000
- * sub 100010
- * addi 001000
- * and 100100
- * or 100101
- * lw 100011
- * sw 101011
- * lui 001111
- * beq 000100
- * slt 101010
- * slti 001010
- * sltu 101001
- * sltiu 001001
- * j 000010
-*/
-
 #define CONTROL_SIGNALS(REGDST, JUMP, BRANCH, MEMREAD, MEMTOREG, ALUOP, MEMWRITE, ALUSRC, REGWRITE) \
 			controls->RegDst = REGDST;\
 			controls->RegWrite = REGWRITE;\
@@ -27,8 +10,6 @@
 			controls->MemtoReg = MEMTOREG;\
 			controls->Jump = JUMP; \
 			controls->Branch = BRANCH;\ 
-
-
 
 enum {
 	ADD = 0x20, // R
@@ -134,48 +115,48 @@ int instruction_decode(unsigned op,struct_controls *controls){
 			CONTROL_SIGNALS(1, 0, 0, 0, 0, 2, 0, 0, 1);
 			break;
 		case SUB:
-			CONTROL_SIGNALS(1, 0, 0, 0, 0, 6, 0, 0, 1);
+			CONTROL_SIGNALS(1, 0, 0, 0, 0, 2, 0, 0, 1);
 			break;
 		case AND:
 			CONTROL_SIGNALS(1, 0, 0, 0, 0, 0, 0, 0, 1);
 			break;
 		case OR:
-			CONTROL_SIGNALS(1, 0, 0, 0, 0, 1, 0, 0, 1);
+			CONTROL_SIGNALS(1, 0, 0, 0, 0, 2, 0, 0, 1);
 			break;
 		case SLT:
-			
+			CONTROL_SIGNALS(1, 0, 0, 0, 0, 2, 0, 0, 1);
 			break;
 		case SLTU:
-
+			CONTROL_SIGNALS(1, 0, 0, 0, 0, 2, 0, 0, 1);
 			break;
 		case ADDI:
-
+			CONTROL_SIGNALS(0, 0, 0, 0, 0, 0, 0, 1, 1);
 			break;
 		case LW:
 			CONTROL_SIGNALS(0, 0, 0, 1, 1, 0, 0, 1, 1);
 			break;
 		case SW:
-
+			CONTROL_SIGNALS(2, 0, 0, 0, 2, 0, 1, 1, 0);
 			break;
 		case LUI:
-
+			CONTROL_SIGNALS(1, 0, 0, 0, 0, -, 0, -, 1);
 			break;
 		case SLTI:
-
+			CONTROL_SIGNALS(1, 0, 0, 0, 0, -, 0, -, 1);
 			break;
 		case SLTIU:
-
+			CONTROL_SIGNALS(1, 0, 0, 0, 0, -, 0, -, 1);
 			break;
 		case BEQ:
 			CONTROL_SIGNALS(2, 0, 1, 0, 2, 1, 0, 0, 0);
 			break;
 		case J:
-
+			CONTROL_SIGNALS(2, 1, 0, 0, 2, 2, 0, 2, 0);
 			break;
 		default:
 
 	}
-
+	// error checking
 
 	
 }
@@ -183,7 +164,8 @@ int instruction_decode(unsigned op,struct_controls *controls){
 /* Read Register */
 void read_register(unsigned r1,unsigned r2,unsigned *Reg,unsigned *data1,unsigned *data2)
 {
-
+	*data1 = Reg[r1];
+	*data2 = Reg[r2];
 }
 
 
