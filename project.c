@@ -2,8 +2,14 @@
 
 
 /* ALU */
+<<<<<<< HEAD
 void ALU(unsigned A,unsigned B,char ALUControl,unsigned *ALUresult,char *Zero) {
 
+=======
+void ALU(unsigned A,unsigned B,char ALUControl,unsigned *ALUresult,char *Zero)
+{
+//fdfdf
+>>>>>>> 310b801c15f8a9317b366c4a25ef5f99ee4a14bb
 }
 
 /* instruction fetch */
