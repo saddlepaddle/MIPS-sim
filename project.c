@@ -49,7 +49,7 @@ int instruction_fetch(unsigned PC,unsigned *Mem,unsigned *instruction) {
 	if ((PC % 4) || (PC < 0 || PC > 0xFFFF))
 		   return 1;
 
-	*instruction = Mem[PC >> 2];
+	*instruction = Mem[PC / 4];
 	return 0;
 }
 
@@ -57,52 +57,13 @@ int instruction_fetch(unsigned PC,unsigned *Mem,unsigned *instruction) {
 /* instruction partition */
 void instruction_partition(unsigned instruction, unsigned *op, unsigned *r1,unsigned *r2, unsigned *r3, unsigned *funct, unsigned *offset, unsigned *jsec) {
 	*op = instruction >> 26;
-	char type;
-
-	switch (*op) {
-		case ADD:
-		case SUB:
-		case AND:
-		case OR:
-		case SLT:
-		case SLTU:
-			type = 'R';
-			break;
-		case ADDI:
-		case LW:
-		case SW:
-		case LUI:
-		case SLTI:
-		case SLTIU:
-		case BEQ:	
-			type = 'I';
-			break;
-		case J:
-			type = 'J';
-		default:
-			type = 'X';
-	}
-
-	switch (type) {
-		case 'R':
-			*r1 = (instruction >> 21) & 0x3F;
-			*r2 = (instruction >> 16) & 0x1F;
-			*r3 = (instruction >> 11) & 0x1F;
-			*offset = (instruction >> 6) & 0x1F;
-			function = instruction & 0x3F;
-			break;
-		case 'I':
-			*r1 = (instruction >> 21) & 0x1F;
-			*r2 = (instruction >> 16) & 0x1F;
-			*offset = instruction & 0xFFFF;
-			break;
-		case 'J':
-			*jsec = instruction & 0x3FFFFFF;
-			break;
-		default:
-	}
+	*r1 = (instruction >> 21) & 0x3F;
+	*r2 = (instruction >> 16) & 0x1F;
+	*r3 = (instruction >> 11) & 0x1F;
+	*funct = instruction & 0x3F;
+	*offset = instruction & 0xFFFF;
+	*jsec = instruction & 0x3FFFFFF;
 }
-
 
 
 /* instruction decode */
@@ -146,30 +107,24 @@ int instruction_decode(unsigned op,struct_controls *controls){
 		default:
 			return 1;
 	}
-
 	
 	return 0;
-
-	
 }
 
 /* Read Register */
-void read_register(unsigned r1,unsigned r2,unsigned *Reg,unsigned *data1,unsigned *data2)
-{
+void read_register(unsigned r1,unsigned r2,unsigned *Reg,unsigned *data1,unsigned *data2) {
 	*data1 = Reg[r1];
 	*data2 = Reg[r2];
 }
 
 
 /* Sign Extend */
-void sign_extend(unsigned offset,unsigned *extended_value)
-{
+void sign_extend(unsigned offset,unsigned *extended_value) {
 	*extended_value = offset >> 15 ? 0xffff0000 : 0x0000ffff;
 }
 
 /* ALU operations */
-int ALU_operations(unsigned data1,unsigned data2,unsigned extended_value,unsigned funct,char ALUOp,char ALUSrc,unsigned *ALUresult,char *Zero)
-{
+int ALU_operations(unsigned data1,unsigned data2,unsigned extended_value,unsigned funct,char ALUOp,char ALUSrc,unsigned *ALUresult,char *Zero) {
 	// Immediate Source
 	if (ALUSrc) {
 		ALU(data1, extended_value, ALUOp, ALUresult, Zero);
@@ -191,32 +146,49 @@ int ALU_operations(unsigned data1,unsigned data2,unsigned extended_value,unsigne
 }
 
 /* Read / Write Memory */
-int rw_memory(unsigned ALUresult,unsigned data2,char MemWrite,char MemRead,unsigned *memdata,unsigned *Mem)
-{
+int rw_memory(unsigned ALUresult,unsigned data2,char MemWrite,char MemRead,unsigned *memdata,unsigned *Mem) {
 	if (MemWrite) {
 		if (ALUresult % 4 || ALUresult < 0 || ALUresult > 0xFFFF) return 1;
-		Mem[ALUresult >> 2] = data2;
+		Mem[ALUresult / 4] = data2;
 	}
 	if (MemRead) {
 		if (ALUresult % 4 || ALUresult < 0 || ALUresult > 0xFFFF) return 1;
-		*memdata = Mem[ALUresult >> 2];
+		*memdata = Mem[ALUresult / 4];
 	}
 
 	return 0;
 }
 
-
 /* Write Register */
-void write_register(unsigned r2,unsigned r3,unsigned memdata,unsigned ALUresult,char RegWrite,char RegDst,char MemtoReg,unsigned *Reg)
-{
-	
+void write_register(unsigned r2,unsigned r3,unsigned memdata,unsigned ALUresult,char RegWrite,char RegDst,char MemtoReg,unsigned *Reg) {
+	unsigned data;
+
+	if (MemtoReg == 1) {
+		data = memdata;
+	} else {
+		data = ALUresult;
+	}
+
+	if (RegWrite) {
+		if (RegDst) {
+			Reg[r3] = r3 ? data : 0;
+		} else {
+			Reg[r2] = r2 ? data : 0;
+		}
+	}
 }
 
 /* PC update */
-void PC_update(unsigned jsec,unsigned extended_value,char Branch,char Jump,char Zero,unsigned *PC)
-{
-	PC + 4;
+void PC_update(unsigned jsec,unsigned extended_value,char Branch,char Jump,char Zero,unsigned *PC) {
+	*PC += 4;
+	
+	if (Branch && Zero) {
+		*PC += extended_value * 4;
+	}
 
-	if (Jump || (Branch && Zero)) *PC = jsec;
+	if (Jump) {
+		*PC &= 0xF0000000;
+		*PC |= jsec * 4;
+	}
 }
 
