@@ -4,12 +4,12 @@
 			controls->RegDst = REGDST;\
 			controls->RegWrite = REGWRITE;\
 			controls-> ALUSrc = ALUSRC;\
-			controls->ALUop = ALUOP;\
+			controls->ALUOp = ALUOP;\
 			controls->MemWrite = MEMWRITE;\
 			controls->MemRead = MEMWRITE;\
 			controls->MemtoReg = MEMTOREG;\
 			controls->Jump = JUMP; \
-			controls->Branch = BRANCH;\ 
+			controls->Branch = BRANCH;
 
 enum {
 	ADD   = 0x20, // R
@@ -33,11 +33,11 @@ void ALU(unsigned A,unsigned B,char ALUControl,unsigned *ALUresult,char *Zero) {
 	switch (ALUControl) {
 		case 0: *ALUresult = A + B; break;
 		case 1: *ALUresult = A - B; break;
-		case 2: *ALUresult = ((int) A < (inst) B ? 1 : 0); break; // SIGNED
+		case 2: *ALUresult = ((int) A < (int) B ? 1 : 0); break; // SIGNED
 		case 3: *ALUresult = (A < B ? 1 : 0); break;
 		case 4: *ALUresult = A & B; break;
 		case 5: *ALUresult = A | B; break;
-		case 6: *ALUresut = B << 16; break;
+		case 6: *ALUresult = B << 16; break;
 		case 7: *ALUresult = ~A; break;
 	}
 
@@ -57,7 +57,7 @@ int instruction_fetch(unsigned PC,unsigned *Mem,unsigned *instruction) {
 /* instruction partition */
 void instruction_partition(unsigned instruction, unsigned *op, unsigned *r1,unsigned *r2, unsigned *r3, unsigned *funct, unsigned *offset, unsigned *jsec) {
 	*op = instruction >> 26;
-	*r1 = (instruction >> 21) & 0x3F;
+	*r1 = (instruction >> 21) & 0x1F;
 	*r2 = (instruction >> 16) & 0x1F;
 	*r3 = (instruction >> 11) & 0x1F;
 	*funct = instruction & 0x3F;
@@ -71,7 +71,7 @@ int instruction_decode(unsigned op,struct_controls *controls){
 	/* CONTROL_SIGNALS args
 	 * 	RegDst, Jump, Branch, MemRead, MemtoReg, ALUOp, MemWrite, ALUSrc, RegWrite
 	 */
-	switch (*op) {
+	switch (op) {
 		case ADD:
 		case SUB:
 		case AND:
@@ -120,7 +120,7 @@ void read_register(unsigned r1,unsigned r2,unsigned *Reg,unsigned *data1,unsigne
 
 /* Sign Extend */
 void sign_extend(unsigned offset,unsigned *extended_value) {
-	*extended_value = offset >> 15 ? 0xffff0000 : 0x0000ffff;
+	*extended_value = (offset >> 15 ? offset | 0xffff0000 : offset & 0x0000ffff);
 }
 
 /* ALU operations */
@@ -129,7 +129,7 @@ int ALU_operations(unsigned data1,unsigned data2,unsigned extended_value,unsigne
 	if (ALUSrc) {
 		ALU(data1, extended_value, ALUOp, ALUresult, Zero);
 	}
-	// R-type
+	// R type
 	else {
 		switch (funct) {
 			case  ADD: ALUOp = 0; break;
@@ -139,10 +139,12 @@ int ALU_operations(unsigned data1,unsigned data2,unsigned extended_value,unsigne
 			case SLTU: ALUOp = 4; break;
 			case   OR: ALUOp = 5; break;
 
-			default: return 1;
+			default: printf("--------------\n %x\n", funct); return 1;
 		}
 		ALU(data1, data2, ALUOp, ALUresult, Zero);
 	}
+
+	return 0;
 }
 
 /* Read / Write Memory */
@@ -168,7 +170,7 @@ void write_register(unsigned r2,unsigned r3,unsigned memdata,unsigned ALUresult,
 	} else {
 		data = ALUresult;
 	}
-
+	/////////////////////////////////////////////////////////////////////
 	if (RegWrite) {
 		if (RegDst) {
 			Reg[r3] = r3 ? data : 0;
