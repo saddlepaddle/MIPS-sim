@@ -12,20 +12,20 @@
 			controls->Branch = BRANCH;\ 
 
 enum {
-	ADD = 0x20, // R
-	SUB = 0x22, // R
-	ADDI = 0x8, // I
-	AND = 0x24, // R
-	OR = 0x25, // R
-	LW = 0x23, // I
-	SW = 0x2B, // I
-	LUI = 0xF, // I
-	BEQ = 0x4, // J
-	SLT = 0x2A, // R
-	SLTI = 0xA, // I
-	SLTU = 0x29, // R
+	ADD   = 0x20, // R
+	SUB   = 0x22, // R
+	ADDI  = 0x8, // I
+	AND   = 0x24, // R
+	OR    = 0x25, // R
+	LW    = 0x23, // I
+	SW    = 0x2B, // I
+	LUI   = 0xF, // I
+	BEQ   = 0x4, // J
+	SLT   = 0x2A, // R
+	SLTI  = 0xA, // I
+	SLTU  = 0x29, // R
 	SLTIU = 0X9,  // I
-	J = 0X2 // J
+	J     = 0X2 // J
 };
 
 /* ALU */
@@ -49,7 +49,7 @@ int instruction_fetch(unsigned PC,unsigned *Mem,unsigned *instruction) {
 	if ((PC % 4) || (PC < 0 || PC > 0xFFFF))
 		   return 1;
 
-	*instruction = Mem[PC / 4];
+	*instruction = Mem[PC];
 	return 0;
 }
 
@@ -112,22 +112,12 @@ int instruction_decode(unsigned op,struct_controls *controls){
 	 */
 	switch (*op) {
 		case ADD:
-			CONTROL_SIGNALS(1, 0, 0, 0, 0, 2, 0, 0, 1);
-			break;
 		case SUB:
-			CONTROL_SIGNALS(1, 0, 0, 0, 0, 2, 0, 0, 1);
-			break;
 		case AND:
-			CONTROL_SIGNALS(1, 0, 0, 0, 0, 0, 0, 0, 1);
-			break;
 		case OR:
-			CONTROL_SIGNALS(1, 0, 0, 0, 0, 2, 0, 0, 1);
-			break;
 		case SLT:
-			CONTROL_SIGNALS(1, 0, 0, 0, 0, 2, 0, 0, 1);
-			break;
 		case SLTU:
-			CONTROL_SIGNALS(1, 0, 0, 0, 0, 2, 0, 0, 1);
+			CONTROL_SIGNALS(1, 0, 0, 0, 0, 7, 0, 0, 1);
 			break;
 		case ADDI:
 			CONTROL_SIGNALS(0, 0, 0, 0, 0, 0, 0, 1, 1);
@@ -136,27 +126,29 @@ int instruction_decode(unsigned op,struct_controls *controls){
 			CONTROL_SIGNALS(0, 0, 0, 1, 1, 0, 0, 1, 1);
 			break;
 		case SW:
-			CONTROL_SIGNALS(2, 0, 0, 0, 2, 0, 1, 1, 0);
+			CONTROL_SIGNALS(2, 0, 0, 0, 0, 0, 1, 1, 0);
 			break;
 		case LUI:
-			CONTROL_SIGNALS(1, 0, 0, 0, 0, -, 0, -, 1);
+			CONTROL_SIGNALS(1, 0, 0, 0, 0, 6, 0, 1, 1);
 			break;
 		case SLTI:
-			CONTROL_SIGNALS(1, 0, 0, 0, 0, -, 0, -, 1);
+			CONTROL_SIGNALS(1, 0, 0, 0, 0, 2, 0, 1, 1);
 			break;
 		case SLTIU:
-			CONTROL_SIGNALS(1, 0, 0, 0, 0, -, 0, -, 1);
+			CONTROL_SIGNALS(1, 0, 0, 0, 0, 3, 0, 1, 1); 
 			break;
 		case BEQ:
-			CONTROL_SIGNALS(2, 0, 1, 0, 2, 1, 0, 0, 0);
+			CONTROL_SIGNALS(2, 0, 1, 0, 2, 1, 0, 2, 0);
 			break;
 		case J:
-			CONTROL_SIGNALS(2, 1, 0, 0, 2, 2, 0, 2, 0);
+			CONTROL_SIGNALS(2, 1, 2, 0, 2, 0, 0, 2, 0);
 			break;
 		default:
-
+			return 1;
 	}
-	// error checking
+
+	
+	return 0;
 
 	
 }
@@ -172,31 +164,59 @@ void read_register(unsigned r1,unsigned r2,unsigned *Reg,unsigned *data1,unsigne
 /* Sign Extend */
 void sign_extend(unsigned offset,unsigned *extended_value)
 {
-
+	*extended_value = offset >> 15 ? 0xffff0000 : 0x0000ffff;
 }
 
 /* ALU operations */
 int ALU_operations(unsigned data1,unsigned data2,unsigned extended_value,unsigned funct,char ALUOp,char ALUSrc,unsigned *ALUresult,char *Zero)
 {
+	// Immediate Source
+	if (ALUSrc) {
+		ALU(data1, extended_value, ALUOp, ALUresult, Zero);
+	}
+	// R-type
+	else {
+		switch (funct) {
+			case  ADD: ALUOp = 0; break;
+			case  SUB: ALUOp = 1; break;
+			case  SLT: ALUOp = 2; break;
+			case  AND: ALUOp = 3; break;
+			case SLTU: ALUOp = 4; break;
+			case   OR: ALUOp = 5; break;
 
+			default: return 1;
+		}
+		ALU(data1, data2, ALUOp, ALUresult, Zero);
+	}
 }
 
 /* Read / Write Memory */
 int rw_memory(unsigned ALUresult,unsigned data2,char MemWrite,char MemRead,unsigned *memdata,unsigned *Mem)
 {
+	if (MemWrite) {
+		if (ALUresult % 4 || ALUresult < 0 || ALUresult > 0xFFFF) return 1;
+		Mem[ALUresult] = data2;
+	}
+	if (MemRead) {
+		if (ALUresult % 4 || ALUresult < 0 || ALUresult > 0xFFFF) return 1;
+		*memdata = Mem[ALUresult];
+	}
 
+	return 0;
 }
 
 
 /* Write Register */
 void write_register(unsigned r2,unsigned r3,unsigned memdata,unsigned ALUresult,char RegWrite,char RegDst,char MemtoReg,unsigned *Reg)
 {
-
+	
 }
 
 /* PC update */
 void PC_update(unsigned jsec,unsigned extended_value,char Branch,char Jump,char Zero,unsigned *PC)
 {
+	PC + 4;
 
+	if (Jump || (Branch && Zero)) *PC = jsec;
 }
 
