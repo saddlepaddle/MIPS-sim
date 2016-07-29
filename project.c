@@ -49,7 +49,7 @@ int instruction_fetch(unsigned PC,unsigned *Mem,unsigned *instruction) {
 	if ((PC % 4) || (PC < 0 || PC > 0xFFFF))
 		   return 1;
 
-	*instruction = Mem[PC];
+	*instruction = Mem[PC >> 2];
 	return 0;
 }
 
@@ -195,11 +195,11 @@ int rw_memory(unsigned ALUresult,unsigned data2,char MemWrite,char MemRead,unsig
 {
 	if (MemWrite) {
 		if (ALUresult % 4 || ALUresult < 0 || ALUresult > 0xFFFF) return 1;
-		Mem[ALUresult] = data2;
+		Mem[ALUresult >> 2] = data2;
 	}
 	if (MemRead) {
 		if (ALUresult % 4 || ALUresult < 0 || ALUresult > 0xFFFF) return 1;
-		*memdata = Mem[ALUresult];
+		*memdata = Mem[ALUresult >> 2];
 	}
 
 	return 0;
