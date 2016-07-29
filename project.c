@@ -11,22 +11,6 @@
 			controls->Jump = JUMP; \
 			controls->Branch = BRANCH;
 
-enum {
-	ADD   = 0x20, // R
-	SUB   = 0x22, // R
-	ADDI  = 0x8, // I
-	AND   = 0x24, // R
-	OR    = 0x25, // R
-	LW    = 0x23, // I
-	SW    = 0x2B, // I
-	LUI   = 0xF, // I
-	BEQ   = 0x4, // J
-	SLT   = 0x2A, // R
-	SLTI  = 0xA, // I
-	SLTU  = 0x29, // R
-	SLTIU = 0X9,  // I
-	J     = 0X2 // J
-};
 
 /* ALU */
 void ALU(unsigned A,unsigned B,char ALUControl,unsigned *ALUresult,char *Zero) {
@@ -65,51 +49,48 @@ void instruction_partition(unsigned instruction, unsigned *op, unsigned *r1,unsi
 	*jsec = instruction & 0x3FFFFFF;
 }
 
-
 /* instruction decode */
-int instruction_decode(unsigned op,struct_controls *controls){
-	/* CONTROL_SIGNALS args
-	 * 	RegDst, Jump, Branch, MemRead, MemtoReg, ALUOp, MemWrite, ALUSrc, RegWrite
-	 */
-	switch (op) {
-		case ADD:
-		case SUB:
-		case AND:
-		case OR:
-		case SLT:
-		case SLTU:
-			CONTROL_SIGNALS(1, 0, 0, 0, 0, 7, 0, 0, 1);
-			break;
-		case ADDI:
-			CONTROL_SIGNALS(0, 0, 0, 0, 0, 0, 0, 1, 1);
-			break;
-		case LW:
-			CONTROL_SIGNALS(0, 0, 0, 1, 1, 0, 0, 1, 1);
-			break;
-		case SW:
-			CONTROL_SIGNALS(2, 0, 0, 0, 0, 0, 1, 1, 0);
-			break;
-		case LUI:
-			CONTROL_SIGNALS(1, 0, 0, 0, 0, 6, 0, 1, 1);
-			break;
-		case SLTI:
-			CONTROL_SIGNALS(1, 0, 0, 0, 0, 2, 0, 1, 1);
-			break;
-		case SLTIU:
-			CONTROL_SIGNALS(1, 0, 0, 0, 0, 3, 0, 1, 1); 
-			break;
-		case BEQ:
-			CONTROL_SIGNALS(2, 0, 1, 0, 2, 1, 0, 2, 0);
-			break;
-		case J:
-			CONTROL_SIGNALS(2, 1, 2, 0, 2, 0, 0, 2, 0);
-			break;
-		default:
-			return 1;
-	}
-	
-	return 0;
+/* 15 Points */
+int instruction_decode(unsigned op,struct_controls *controls) {
+        switch(op){
+
+		/* Macro Arguments:
+		 * RegDst, Jump, Branch, MemRead, MemtoReg, ALUOp, MemWrite, ALUSrc, RegWrite
+		 */
+
+                case 0:
+                        CONTROL_SIGNALS(1,0,0,0,0,7,0,0,1);
+                        break;
+                case 8:
+                        CONTROL_SIGNALS(0,0,0,0,0,0,0,1,1);
+                        break;
+                case 35:
+                        CONTROL_SIGNALS(0,0,0,1,1,0,0,1,1);
+                        break;
+                case 43:
+                        CONTROL_SIGNALS(0,0,0,0,0,0,1,1,0);
+                        break;
+                case 15:
+                        CONTROL_SIGNALS(0,0,0,0,0,6,0,1,1);
+                        break;
+                case 4:
+                        CONTROL_SIGNALS(2,0,1,0,2,1,0,2,0);
+                        break;
+                case 10:
+                        CONTROL_SIGNALS(0,0,0,0,0,2,0,1,1);
+                        break;
+                case 11:
+                        CONTROL_SIGNALS(0,0,0,0,0,3,0,1,1);
+                        break;
+                case 2:
+                        CONTROL_SIGNALS(2,1,2,0,2,0,0,2,0);
+                        break;
+                default:
+                        return 1;
+        }
+        return 0;
 }
+
 
 /* Read Register */
 void read_register(unsigned r1,unsigned r2,unsigned *Reg,unsigned *data1,unsigned *data2) {
@@ -122,30 +103,53 @@ void read_register(unsigned r1,unsigned r2,unsigned *Reg,unsigned *data1,unsigne
 void sign_extend(unsigned offset,unsigned *extended_value) {
 	*extended_value = (offset >> 15 ? offset | 0xffff0000 : offset & 0x0000ffff);
 }
-
 /* ALU operations */
+/* 10 Points */
 int ALU_operations(unsigned data1,unsigned data2,unsigned extended_value,unsigned funct,char ALUOp,char ALUSrc,unsigned *ALUresult,char *Zero) {
-	// Immediate Source
-	if (ALUSrc) {
-		ALU(data1, extended_value, ALUOp, ALUresult, Zero);
-	}
-	// R type
-	else {
-		switch (funct) {
-			case  ADD: ALUOp = 0; break;
-			case  SUB: ALUOp = 1; break;
-			case  SLT: ALUOp = 2; break;
-			case  AND: ALUOp = 3; break;
-			case SLTU: ALUOp = 4; break;
-			case   OR: ALUOp = 5; break;
 
-			default: printf("--------------\n %x\n", funct); return 1;
-		}
-		ALU(data1, data2, ALUOp, ALUresult, Zero);
-	}
+        unsigned char ALUControl = ALUOp;
 
-	return 0;
+        switch(ALUOp){
+                case 0x0:
+                case 0x1:
+                case 0x2:
+                case 0x3:
+                case 0x4:
+                case 0x5:
+                case 0x6:
+                        break;
+                case 0x7:
+                        switch(funct){
+                                case 0x20:
+                                        ALUControl = 0x0;
+		                        break;
+                                case 0x24:
+                                        ALUControl = 0x4;
+		                        break;
+                                case 0x25:      // or
+                                        ALUControl = 0x5;
+                    			break;
+                                case 0x2a:
+                                        ALUControl = 0x2;
+                    			break;
+                                case 0x2b:
+                                        ALUControl = 0x3;
+                    			break;
+                                default:
+                                        return 1;
+                        }
+            		break;
+                default:
+                	 return 1;
+
+        }
+
+        ALU(data1, (ALUSrc == 1)? extended_value : data2, ALUControl, ALUresult, Zero);
+
+        return 0;
+
 }
+
 
 /* Read / Write Memory */
 int rw_memory(unsigned ALUresult,unsigned data2,char MemWrite,char MemRead,unsigned *memdata,unsigned *Mem) {
