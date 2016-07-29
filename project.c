@@ -33,7 +33,7 @@ void ALU(unsigned A,unsigned B,char ALUControl,unsigned *ALUresult,char *Zero) {
 	switch (ALUControl) {
 		case 0: *ALUresult = A + B; break;
 		case 1: *ALUresult = A - B; break;
-		case 2: *ALUresult = (A < B ? 1 : 0); break; // SIGNED
+		case 2: *ALUresult = ((int) A < (inst) B ? 1 : 0); break; // SIGNED
 		case 3: *ALUresult = (A < B ? 1 : 0); break;
 		case 4: *ALUresult = A & B; break;
 		case 5: *ALUresult = A | B; break;
